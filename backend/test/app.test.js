@@ -59,6 +59,17 @@ test('rotas de upload, listagem e download respeitam os contratos', async (t) =>
   });
   assert.strictEqual(missingUser.status, 400);
 
+  const missingUserList = await request(server, { route: '/documents' });
+  assert.strictEqual(missingUserList.status, 400);
+
+  const missingUserDownload = await request(server, { route: '/documents/inexistente/download' });
+  assert.strictEqual(missingUserDownload.status, 400);
+
+  const missingDocument = await request(server, {
+    route: '/documents/inexistente/download', headers: { 'X-User-Id': 'user-42' },
+  });
+  assert.strictEqual(missingDocument.status, 404);
+
   const noFile = Buffer.from('--dms-test-boundary--\r\n');
   const missingFile = await request(server, {
     method: 'POST', route: '/upload',
@@ -77,6 +88,9 @@ test('rotas de upload, listagem e download respeitam os contratos', async (t) =>
   assert.strictEqual(document.originalName, 'contrato.txt');
   assert.strictEqual(document.owner, 'user-42');
   assert.strictEqual(document.size, content.length);
+  assert.ok(document.id);
+  assert.strictEqual(document.mimeType, 'text/plain');
+  assert.ok(!Number.isNaN(Date.parse(document.uploadedAt)));
   assert.ok(!Object.hasOwn(document, 'storedName'));
 
   const listed = await request(server, {
